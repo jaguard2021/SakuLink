@@ -1,0 +1,52 @@
+{
+  "name": "sakulink",
+  "version": "1.0.0",
+  "description": "SakuLink - Programmable Remittance Platform for Migrant Workers",
+  "main": "dist/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prisma:generate": "npx prisma generate",
+    "prisma:migrate": "npx prisma migrate dev --name init",
+    "prisma:studio": "npx prisma studio"
+  },
+  "keywords": [
+    "remittance",
+    "web3",
+    "circle",
+    "arc-network",
+    "migrant-workers"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@circle-fin/adapter-circle-wallets": "^1.4.3",
+    "@circle-fin/bridge-kit": "^1.12.1",
+    "@prisma/client": "^6.19.3",
+    "axios": "^1.6.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.0",
+    "node-cron": "^4.6.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.0",
+    "@types/node": "^26.1.1",
+    "@types/node-cron": "^3.0.11",
+    "nodemon": "^3.1.14",
+    "prisma": "^6.19.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "prisma@6.19.3": true,
+    "@prisma/engines@6.19.3": true
+  }
+}

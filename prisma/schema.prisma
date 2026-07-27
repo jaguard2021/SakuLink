@@ -1,0 +1,256 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+
+enum IdentityType {
+  NATIONAL_ID
+  PASSPORT
+  RESIDENT_PERMIT
+  WORK_PERMIT
+}
+
+enum KycStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum TxType {
+  DEPOSIT
+  REMITTANCE
+  SAVING_LOCK
+  BILL_PAYMENT
+}
+
+enum TxStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum Country {
+  HongKong
+  Taiwan
+  Malaysia
+  Indonesia
+  Singapore
+  SaudiArabia
+  Qatar
+  UnitedArabEmirates
+  China
+  UnitedStates
+  Other
+}
+
+
+enum TransfiOrderType {
+  ONRAMP
+  OFFRAMP
+}
+
+enum TransactionStatus {
+  PENDING
+  PAYMENT_PENDING
+  PAID
+  CRYPTO_SENT
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+
+model User {
+  id             String         @id @default(uuid())
+  fullName       String
+  email          String         @unique
+  password       String
+  country        Country
+  identityType   IdentityType
+  identityNumber String?
+  kycStatus      KycStatus      @default(PENDING)
+
+  phone          String?
+  phoneCode      String?
+  gender         String?
+  street         String?
+  city           String?
+  state          String?
+  postalCode     String?
+
+  transfiUserId  String?        @unique
+
+  wallet         Wallet?
+  fiatAccount    FiatAccount?
+  transactions   Transaction[]
+  rules          AutomationRule[]
+  recipients     Recipient[]
+  payments       Payment[]
+  transfiOrders  TransfiOrder[]
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+
+model Wallet {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+
+  circleWalletId String   @unique
+  address        String   @unique
+  network        String   @default("ARC-TESTNET")
+  token          String   @default("USDC")
+  balance        Float    @default(0.0)
+
+  createdAt      DateTime @default(now())
+}
+
+
+model FiatAccount {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+
+  currency       String   @default("SGD")
+  localAmount    Float    @default(0.0)
+  usdBalance     Float    @default(0.0)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+
+model Recipient {
+  id             String         @id @default(uuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+
+  name           String
+  bankName       String?
+  bankAccount    String?
+  walletAddress  String?
+  country        Country
+
+  rules          AutomationRule[]
+
+  createdAt      DateTime       @default(now())
+}
+
+
+model AutomationRule {
+  id             String         @id @default(uuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+
+  name           String
+  type           String
+  amount         Float
+  currency       String         @default("USDC")
+  schedule       String
+
+  recipientId    String?
+  recipient      Recipient?     @relation(fields: [recipientId], references: [id])
+
+  lastExecutedAt DateTime?
+  active         Boolean        @default(true)
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  transactions   Transaction[]
+}
+
+
+model Transaction {
+  id                String          @id @default(uuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+
+  ruleId            String?
+  rule              AutomationRule? @relation(fields: [ruleId], references: [id])
+
+  type              TxType
+  status            TxStatus        @default(PENDING)
+
+  currency          String
+  amount            Float
+  usdcAmount        Float?
+
+  circleTxId        String?
+  hitpayPaymentId   String?         @unique
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+
+model Payment {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+
+  provider          String
+  paymentId         String   @unique
+  referenceNumber   String?  @unique
+  currency          String
+  amount            Float
+  status            String
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+
+model TransfiOrder {
+  id                  String            @id @default(uuid())
+  userId              String
+  user                User              @relation(fields: [userId], references: [id])
+
+  orderType           TransfiOrderType  @default(ONRAMP)
+
+  provider            String            @default("TRANSFI")
+  providerOrderId     String?           @unique
+  providerTraceId     String?
+
+  amount              Float
+  currency            String            @default("USD")
+
+  paymentType         String?
+  paymentCode         String?
+
+  crypto              String            @default("USDCBASE")
+  cryptoNetwork       String            @default("Base")
+  cryptoAmount        Float?
+
+  walletAddress       String
+  walletOwner         String?
+
+  successRedirectUrl  String?
+  failureRedirectUrl  String?
+
+  payUrl              String?
+  payToken            String?
+
+  status              TransactionStatus @default(PENDING)
+
+  fee                 Float?
+
+  rawResponse         Json?
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([providerOrderId])
+  @@index([createdAt])
+
+  @@map("transfi_orders")
+}
