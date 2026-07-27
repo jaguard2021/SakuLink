@@ -1,5 +1,3 @@
-// src/controllers/onrampController.ts
-
 import { Request, Response } from 'express';
 import { createTransFiOnrampOrder, createTransFiUser } from '../services/transfiService';
 import prisma from '../lib/prisma';
@@ -66,7 +64,7 @@ export async function initiateOnramp(req: AuthRequest, res: Response) {
           },
         });
 
-        transFiUserId = transfiUser.data?.userId;
+        transFiUserId = transfiUser.data?.userId || transfiUser.userId;
 
         if (!transFiUserId) {
           throw new Error('TransFi user ID was not returned');
@@ -75,7 +73,7 @@ export async function initiateOnramp(req: AuthRequest, res: Response) {
         await prisma.user.update({
           where: { id: dbUser.id },
           data: {
-            transfiUserId,
+            transfiUserId: transFiUserId,
           },
         });
 
