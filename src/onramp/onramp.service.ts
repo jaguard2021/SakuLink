@@ -1,4 +1,3 @@
-// src/onramp/onramp.service.ts
 import prisma from '../lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
 import { Prisma } from '@prisma/client';
@@ -27,7 +26,7 @@ export enum OnRampStep {
 }
 
 // ============================================================
-// 📦 INTERFACE
+// 📦 INTERFACE (diperbaiki agar kompatibel dengan Prisma)
 // ============================================================
 
 export interface OnRampRecord {
@@ -35,17 +34,20 @@ export interface OnRampRecord {
   userId: string;
   amount: number;              // USD amount
   currency: string;            // "USD"
-  fiatAmount?: number;         // Original fiat amount if different
-  fiatCurrency?: string;       // Original fiat currency
-  status: OnRampStatus;
-  step: OnRampStep;
-  trackingRef?: string;        // Circle Mint trackingRef
-  transferId?: string;         // Circle Mint transfer ID
-  transactionHash?: string;    // Blockchain tx hash
-  errorMessage?: string;
+  fiatAmount?: number | null;  // nullable
+  fiatCurrency?: string | null; // nullable
+
+  status: OnRampStatus | string;  // bisa enum atau string dari DB
+  step: OnRampStep | string | null; // bisa enum, string, atau null
+
+  trackingRef?: string | null;
+  transferId?: string | null;
+  transactionHash?: string | null;
+  errorMessage?: string | null;
+
   createdAt: Date;
   updatedAt: Date;
-  completedAt?: Date;
+  completedAt?: Date | null;
 }
 
 // ============================================================
@@ -240,7 +242,7 @@ export async function handleUserCredited(onRampId: string): Promise<OnRampRecord
 export async function markOnRampFailed(id: string, errorMessage: string): Promise<OnRampRecord> {
   return updateOnRampStep(
     id,
-    OnRampStep.USER_REQUESTED, // keep last known step or set to a failed step
+    OnRampStep.USER_REQUESTED,
     OnRampStatus.FAILED,
     { errorMessage }
   );
@@ -287,8 +289,8 @@ export async function getOnRampStatus(id: string): Promise<{
   }
 
   return {
-    status: record.status,
-    step: record.step,
+    status: record.status as OnRampStatus, // asumsi status selalu valid enum
+    step: record.step as OnRampStep,
     amount: record.amount,
     currency: record.currency,
     trackingRef: record.trackingRef || undefined,

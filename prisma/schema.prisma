@@ -8,7 +8,7 @@ datasource db {
 }
 
 // ============================================================
-// ENUMS EXISTING
+// ENUMS
 // ============================================================
 enum IdentityType {
   NATIONAL_ID
@@ -66,20 +66,7 @@ enum TransactionStatus {
 }
 
 // ============================================================
-// 🔹 ENUM UNTUK MOONPAY (BARU)
-// ============================================================
-enum MoonPayStatus {
-  PENDING
-  WAITING_FOR_PAYMENT
-  WAITING_FOR_DEPOSIT
-  COMPLETED
-  FAILED
-  EXPIRED
-  CANCELLED
-}
-
-// ============================================================
-// MODEL USER (EXISTING + RELASI MOONPAY)
+// MODEL USER
 // ============================================================
 model User {
   id             String         @id @default(uuid())
@@ -108,15 +95,14 @@ model User {
   recipients     Recipient[]
   payments       Payment[]
   transfiOrders  TransfiOrder[]
-
-  moonpayOrders  MoonPayOrder[]
+  onRampTransactions OnRampTransaction[]
 
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 }
 
 // ============================================================
-// WALLET (EXISTING)
+// WALLET
 // ============================================================
 model Wallet {
   id             String   @id @default(uuid())
@@ -134,7 +120,7 @@ model Wallet {
 }
 
 // ============================================================
-// FIAT ACCOUNT (EXISTING)
+// FIAT ACCOUNT
 // ============================================================
 model FiatAccount {
   id             String   @id @default(uuid())
@@ -150,7 +136,7 @@ model FiatAccount {
 }
 
 // ============================================================
-// RECIPIENT (EXISTING)
+// RECIPIENT
 // ============================================================
 model Recipient {
   id             String         @id @default(uuid())
@@ -169,7 +155,7 @@ model Recipient {
 }
 
 // ============================================================
-// AUTOMATION RULE (EXISTING)
+// AUTOMATION RULE
 // ============================================================
 model AutomationRule {
   id             String         @id @default(uuid())
@@ -195,7 +181,7 @@ model AutomationRule {
 }
 
 // ============================================================
-// TRANSACTION (EXISTING + FIELD BARU)
+// TRANSACTION
 // ============================================================
 model Transaction {
   id                String          @id @default(uuid())
@@ -216,16 +202,16 @@ model Transaction {
   userTxHash        String?
   hitpayPaymentId   String?         @unique
 
-  // 🔹 Field baru untuk provider (Circle Mint, MoonPay, TransFi, HitPay)
-  provider          String?         // 'CIRCLE_MINT', 'HITPAY', 'MOONPAY', 'TRANSFI'
-  providerOrderId   String?         @unique // ID dari provider (trackingRef, transferId, dll)
+  // Provider transaksi (Circle Mint, TransFi, HitPay)
+  provider          String?         // 'CIRCLE_MINT', 'HITPAY', 'TRANSFI'
+  providerOrderId   String?         @unique
 
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 }
 
 // ============================================================
-// PAYMENT (EXISTING)
+// PAYMENT
 // ============================================================
 model Payment {
   id                String   @id @default(uuid())
@@ -244,7 +230,7 @@ model Payment {
 }
 
 // ============================================================
-// TRANSFI ORDER (EXISTING)
+// TRANSFI ORDER
 // ============================================================
 model TransfiOrder {
   id                  String            @id @default(uuid())
@@ -294,43 +280,39 @@ model TransfiOrder {
 }
 
 // ============================================================
-// 🔹 MODEL KHUSUS MOONPAY ORDER (BARU)
+// CIRCLE MINT ONRAMP TRANSACTION (UPDATED)
 // ============================================================
-model MoonPayOrder {
-  id                    String          @id @default(uuid())
-  userId                String
-  user                  User            @relation(fields: [userId], references: [id])
+model OnRampTransaction {
+  id                  String   @id @default(uuid())
 
-  moonPayTransactionId  String          @unique
-  eventType             String?
+  userId              String
+  user                User     @relation(fields: [userId], references: [id])
 
-  status                MoonPayStatus   @default(PENDING)
+  amount              Float
+  fiatAmount          Float?
+  fiatCurrency        String   @default("USD")   // 🔹 BARU: mata uang fiat yang digunakan
 
-  fiatCurrency          String          @default("USD")
-  fiatAmount            Float
+  currency            String   @default("USD")   // 🔹 tetap ada (mungkin untuk USDC atau lainnya)
 
-  cryptoCurrency        String          @default("USDC")
-  cryptoNetwork         String          @default("ARC-TESTNET")
-  cryptoAmount          Float?
+  usdcAmount          Float?
 
-  walletAddress         String
+  status              String   @default("PENDING")
 
-  transactionHash       String?
+  step                String?
 
-  widgetRedirectUrl     String?
+  circleMintId        String?
+  circleTransferId    String?
 
-  feeAmount             Float?
-  networkFeeAmount      Float?
+  trackingRef         String?
+  transferId          String?
 
-  rawResponse           Json?
+  walletAddress       String?
 
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
+  errorMessage        String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
-  @@index([moonPayTransactionId])
-  @@index([createdAt])
-
-  @@map("moonpay_orders")
 }

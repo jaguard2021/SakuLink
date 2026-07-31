@@ -1,10 +1,10 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middleware/authMiddleware';
+import { AuthRequest } from '../middlewares/auth';
 import { transfiOffRamp } from '../services/transfiService';
 
 export async function initiateOfframp(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const userId = req.user?.userId;
+    const userId = req.userId; // ✅ langsung ambil dari req.userId
     if (!userId) {
       res.status(401).json({ success: false, error: 'Unauthorized' });
       return;
