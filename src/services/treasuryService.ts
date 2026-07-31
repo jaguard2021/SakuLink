@@ -1,9 +1,9 @@
-export function getBaseTreasuryWalletId(): string {
-  const walletId = process.env.CIRCLE_TREASURY_WALLET_ID_BASE;
+export function getEthTreasuryWalletId(): string {
+  const walletId = process.env.CIRCLE_TREASURY_WALLET_ID_ETH;
 
   if (!walletId) {
     throw new Error(
-      'CIRCLE_TREASURY_WALLET_ID_BASE is not defined in .env'
+      'CIRCLE_TREASURY_WALLET_ID_ETH is not defined in .env'
     );
   }
 
@@ -11,5 +11,13 @@ export function getBaseTreasuryWalletId(): string {
 }
 
 export function getArcTreasuryWalletId(): string {
-  return getBaseTreasuryWalletId();
+  const walletId = process.env.CIRCLE_TREASURY_WALLET_ID_ARC;
+
+  if (!walletId) {
+    throw new Error(
+      'CIRCLE_TREASURY_WALLET_ID_ARC is not defined in .env'
+    );
+  }
+
+  return walletId;
 }

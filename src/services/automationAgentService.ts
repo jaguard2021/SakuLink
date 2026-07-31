@@ -1,11 +1,12 @@
+// src/services/automationAgentService.ts
 import prisma from '../lib/prisma';
 import { TxStatus } from '@prisma/client';
-import { getBaseTreasuryWalletId } from './treasuryService';
+import { getEthTreasuryWalletId } from './treasuryService';
 import { checkUserBalance, getUserWalletId } from './walletService';
 import { getActiveRules, shouldExecuteRule, hasPendingTransaction } from './ruleEngineService';
 import { shouldPauseTransfer } from './exchangeRateService';
 import { requestConfirmation, checkConfirmation } from './notificationService';
-import { bridgeArcToBase, waitForBridgeCompletion } from './bridgeKitService';
+import { bridgeArcToEth } from './bridgeKitService';
 import { transfiOffRamp } from './transfiService';
 import { createTransaction, updateTransactionStatus } from './transactionService';
 
@@ -138,18 +139,16 @@ export class AutomationAgent {
 
     try {
       const sourceWalletId = await getUserWalletId(user.id);
-      const treasuryWalletId = getBaseTreasuryWalletId();
+      const treasuryWalletId = getEthTreasuryWalletId();
 
-      const bridgeResult = await bridgeArcToBase({
+      const bridgeResult = await bridgeArcToEth({
         sourceWalletId,
         destinationWalletId: treasuryWalletId,
         amountUSDC: rule.amount,
       });
 
-      const bridgeStatus = await waitForBridgeCompletion(bridgeResult);
-
-      if (!bridgeStatus.completed) {
-        console.log(`Bridge failed: ${bridgeStatus.state}`);
+      if (bridgeResult.state !== 'success') {
+        console.log(`Bridge failed: ${bridgeResult.state}`);
         await updateTransactionStatus(transaction.id, 'FAILED');
         return;
       }

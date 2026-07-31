@@ -28,3 +28,15 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Testing / sandbox
+test-*.ts
+test-*.js
+*-wallet.ts
+*-wallet.js
+check-*.ts
+find-*.ts
+get-*.ts
+transfer-*.ts
+add-recipient.ts
+currencies.json

@@ -1,223 +1,90 @@
-import { BridgeKit } from '@circle-fin/bridge-kit';
+// src/services/bridgeKitService.ts
+
+import { AppKit, BridgeChain } from '@circle-fin/app-kit';
 import { createCircleWalletsAdapter } from '@circle-fin/adapter-circle-wallets';
 import { initiateDeveloperControlledWalletsClient } from '@circle-fin/developer-controlled-wallets';
 
+// ── Circle Developer Controlled Wallets Client ──────────────────────────
 const circleClient = initiateDeveloperControlledWalletsClient({
   apiKey: process.env.CIRCLE_API_KEY!,
   entitySecret: process.env.CIRCLE_ENTITY_SECRET!,
 });
 
-const adapter = createCircleWalletsAdapter({
-  apiKey: process.env.CIRCLE_API_KEY!,
-  entitySecret: process.env.CIRCLE_ENTITY_SECRET!,
-});
+// ── App Kit Instance ─────────────────────────────────────────────────────
+const kit = new AppKit();
 
-const bridgeKit = new BridgeKit();
-
-async function getWalletAddress(walletId: string): Promise<string> {
-  try {
-    const response = await circleClient.getWallet({ id: walletId });
-    const address = response.data?.wallet?.address;
-
-    if (!address) {
-      throw new Error(`Address not found for wallet ID: ${walletId}`);
-    }
-
-    console.log(`Fetched address for wallet ${walletId}: ${address}`);
-
-    return address;
-  } catch (error: any) {
-    console.error(
-      `Failed to fetch wallet address for ${walletId}:`,
-      error.message
-    );
-
-    throw error;
-  }
-}
-
-export async function bridgeBaseToArc(params: {
-  sourceWalletId: string;
-  destinationWalletId: string;
-  amountUSDC: number;
-}) {
-  const { sourceWalletId, destinationWalletId, amountUSDC } = params;
-
-  console.log(
-    `Preparing bridge: ${amountUSDC} USDC from Base Sepolia to Arc Testnet`
-  );
-
-  try {
-    const sourceAddress = await getWalletAddress(sourceWalletId);
-    const destinationAddress = await getWalletAddress(destinationWalletId);
-
-    console.log(
-      `Source Address: ${sourceAddress}\nDestination Address: ${destinationAddress}`
-    );
-
-    const result = await bridgeKit.bridge({
-      from: {
-        adapter,
-        chain: 'Base_Sepolia',
-        address: sourceAddress,
-      } as any,
-      to: {
-        adapter,
-        chain: 'Arc_Testnet',
-        address: destinationAddress,
-      } as any,
-      amount: amountUSDC.toString(),
-    } as any);
-
-    console.log(`Bridge result state: ${result.state}`);
-
-    const mintStep = (result.steps as any)?.find(
-      (s: any) => s.name === 'mint'
-    );
-
-    const txHash = mintStep?.txHash || (result as any).txHash;
-
-    return {
-      transactionId: txHash || `bridge-${Date.now()}`,
-      state: result.state,
-      steps: result.steps,
-    };
-  } catch (error: any) {
-    console.error(
-      'Bridge Base to Arc failed:',
-      error.message
-    );
-
-    throw error;
-  }
-}
-
-export async function bridgeArcToBase(params: {
-  sourceWalletId: string;
-  destinationWalletId: string;
-  amountUSDC: number;
-}) {
-  const { sourceWalletId, destinationWalletId, amountUSDC } = params;
-
-  console.log(
-    `Preparing bridge: ${amountUSDC} USDC from Arc Testnet to Base Sepolia`
-  );
-
-  try {
-    const sourceAddress = await getWalletAddress(sourceWalletId);
-    const destinationAddress = await getWalletAddress(destinationWalletId);
-
-    const result = await bridgeKit.bridge({
-      from: {
-        adapter,
-        chain: 'Arc_Testnet',
-        address: sourceAddress,
-      } as any,
-      to: {
-        adapter,
-        chain: 'Base_Sepolia',
-        address: destinationAddress,
-      } as any,
-      amount: amountUSDC.toString(),
-    } as any);
-
-    console.log(`Bridge result state: ${result.state}`);
-
-    const mintStep = (result.steps as any)?.find(
-      (s: any) => s.name === 'mint'
-    );
-
-    const txHash = mintStep?.txHash || (result as any).txHash;
-
-    return {
-      transactionId: txHash || `bridge-${Date.now()}`,
-      state: result.state,
-      steps: result.steps,
-    };
-  } catch (error: any) {
-    console.error(
-      'Bridge Arc to Base failed:',
-      error.message
-    );
-
-    throw error;
-  }
-}
-
-export async function waitForBridgeCompletion(
-  result: any,
-  maxAttempts: number = 30,
-  intervalMs: number = 2000
-): Promise<{ completed: boolean; state: string }> {
-  console.log('Waiting for bridge completion');
-
-  return new Promise((resolve) => {
-    let attempts = 0;
-
-    const checkState = () => {
-      attempts++;
-
-      if (result.state === 'success') {
-        console.log('Bridge completed successfully');
-
-        resolve({
-          completed: true,
-          state: result.state,
-        });
-
-        return;
-      }
-
-      if (result.state === 'error' || result.state === 'failed') {
-        console.log(`Bridge failed: ${result.state}`);
-
-        resolve({
-          completed: false,
-          state: result.state,
-        });
-
-        return;
-      }
-
-      if (attempts < maxAttempts) {
-        setTimeout(checkState, intervalMs);
-      } else {
-        console.log(
-          `Bridge timeout after ${maxAttempts} attempts`
-        );
-
-        resolve({
-          completed: false,
-          state: 'TIMEOUT',
-        });
-      }
-    };
-
-    setTimeout(checkState, intervalMs);
+// ── Adapter Factory (per request) ────────────────────────────────────────
+function createAdapter() {
+  return createCircleWalletsAdapter({
+    apiKey: process.env.CIRCLE_API_KEY!,
+    entitySecret: process.env.CIRCLE_ENTITY_SECRET!,
   });
 }
 
-export async function retryBridge(
-  result: any,
-  context?: any
-): Promise<any> {
-  try {
-    console.log('Retrying bridge...');
+// ── Ambil address wallet user dari Circle ────────────────────────────────
+async function getWalletAddress(walletId: string): Promise<string> {
+  const response = await circleClient.getWallet({ id: walletId });
+  const address = response.data?.wallet?.address;
 
-    const retryResult = await bridgeKit.retry(
-      result,
-      context
-    );
-
-    console.log(`Retry result state: ${retryResult.state}`);
-
-    return retryResult;
-  } catch (error: any) {
-    console.error(
-      'Retry failed:',
-      error.message
-    );
-
-    throw error;
+  if (!address) {
+    throw new Error(`Address not found for wallet ID: ${walletId}`);
   }
+
+  return address;
+}
+
+// ── Bridge: User Arc Testnet → Treasury Ethereum Sepolia ─────────────────
+export async function bridgeArcToEth(params: {
+  sourceWalletId: string;      // walletId user dari DB Sakulink (Arc Testnet)
+  destinationWalletId: string; // walletId Treasury Ethereum Sepolia
+  amountUSDC: number;
+}) {
+  const { sourceWalletId, destinationWalletId, amountUSDC } = params;
+
+  const sourceAddress      = await getWalletAddress(sourceWalletId);
+  const destinationAddress = await getWalletAddress(destinationWalletId);
+
+  console.log(`Bridge ${amountUSDC} USDC: Arc Testnet (${sourceAddress}) → ETH Sepolia (${destinationAddress})`);
+
+  const adapter = createAdapter();
+
+  const result = await kit.bridge({
+    from: { adapter, chain: BridgeChain.Arc_Testnet,        address: sourceAddress },
+    to:   { adapter, chain: BridgeChain.Ethereum_Sepolia,   address: destinationAddress },
+    amount: amountUSDC.toString(),
+  });
+
+  return {
+    transactionId: result.steps?.[0]?.txHash || `bridge-${Date.now()}`,
+    state: 'success',
+    steps: result.steps,
+  };
+}
+
+// ── Bridge: Treasury Ethereum Sepolia → User Arc Testnet ─────────────────
+export async function bridgeEthToArc(params: {
+  sourceWalletId: string;      // walletId Treasury Ethereum Sepolia
+  destinationWalletId: string; // walletId user dari DB Sakulink (Arc Testnet)
+  amountUSDC: number;
+}) {
+  const { sourceWalletId, destinationWalletId, amountUSDC } = params;
+
+  const sourceAddress      = await getWalletAddress(sourceWalletId);
+  const destinationAddress = await getWalletAddress(destinationWalletId);
+
+  console.log(`Bridge ${amountUSDC} USDC: ETH Sepolia (${sourceAddress}) → Arc Testnet (${destinationAddress})`);
+
+  const adapter = createAdapter();
+
+  const result = await kit.bridge({
+    from: { adapter, chain: BridgeChain.Ethereum_Sepolia, address: sourceAddress },
+    to:   { adapter, chain: BridgeChain.Arc_Testnet,       address: destinationAddress },
+    amount: amountUSDC.toString(),
+  });
+
+  return {
+    transactionId: result.steps?.[0]?.txHash || `bridge-${Date.now()}`,
+    state: 'success',
+    steps: result.steps,
+  };
 }

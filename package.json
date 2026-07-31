@@ -23,6 +23,7 @@
   "license": "ISC",
   "dependencies": {
     "@circle-fin/adapter-circle-wallets": "^1.4.3",
+    "@circle-fin/app-kit": "^1.10.0",
     "@circle-fin/bridge-kit": "^1.12.1",
     "@prisma/client": "^6.19.3",
     "axios": "^1.6.0",

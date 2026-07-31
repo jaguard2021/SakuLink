@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { automationAgent } from '../services/automationAgentService';
 import { getWalletBalance } from '../services/circleService';
-import { getBaseTreasuryWalletId } from '../services/treasuryService';
+import { getEthTreasuryWalletId } from '../services/treasuryService';
 
 export const triggerAutomation = async (req: Request, res: Response) => {
   try {
@@ -55,11 +55,12 @@ export const getAutomationStatus = async (req: Request, res: Response) => {
     let balance = 0;
     if (user?.wallet) {
       const balances = await getWalletBalance(user.wallet.circleWalletId);
-      const usdc = balances.find((b: any) => b.currency === 'USDC');
+      // ✅ Diperbaiki: Circle SDK mengembalikan struktur token dengan symbol
+      const usdc = balances.find((b: any) => b.token?.symbol === 'USDC' || b.currency === 'USD' || b.currency === 'USDC');
       balance = usdc ? parseFloat(usdc.amount) : 0;
     }
 
-    const treasuryId = getBaseTreasuryWalletId();
+    const treasuryId = getEthTreasuryWalletId();
 
     res.status(200).json({
       success: true,
