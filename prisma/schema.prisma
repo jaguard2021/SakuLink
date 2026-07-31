@@ -213,6 +213,7 @@ model Transaction {
   usdcAmount        Float?
 
   circleTxId        String?
+  userTxHash        String?
   hitpayPaymentId   String?         @unique
 
   // 🔹 Field baru untuk provider (Circle Mint, MoonPay, TransFi, HitPay)
